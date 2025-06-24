@@ -198,7 +198,8 @@ async function sendVerificationCode(
 
 function generateEmailTemplate(verificationCode) {
   return `
-F50; text-align: center;">Verification Code</h2>
+ <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+      <h2 style="color: #4CAF50; text-align: center;">Verification Code</h2>
       <p style="font-size: 16px; color: #333;">Dear User,</p>
       <p style="font-size: 16px; color: #333;">Your verification code is:</p>
       <div style="text-align: center; margin: 20px 0;">
