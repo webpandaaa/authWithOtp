@@ -1,5 +1,5 @@
-export const sendToken = (user , statusCode , message , res)=>{
-    const token = user.generateToken(); 
+export const sendToken = async (user , statusCode , message , res)=>{
+    const token = await user.generateToken(); 
     res
     .status(statusCode)
     .cookie("token" , token, {
