@@ -4,6 +4,7 @@ import { User } from "../models/userModel.js";
 import twilio from "twilio";
 import { sendEmail } from "../utils/sendEmail.js";
 import dotenv from "dotenv";
+import { sendToken } from "../utils/sendToken.js";
 dotenv.config({ path: "./.env" });
 
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -145,10 +146,29 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     user.verificationCodeExpire = null;
     await user.save({ validateModifiedOnly: true });
 
-    // sendToken(user, 200, "Account Verified.", res);
+    sendToken(user, 200, "Account Verified", res);
   } catch (error) {
+    console.log(error);
     return next(new ErrorHandler("Internal Server Error.", 500));
   }
+});
+
+export const login = catchAsyncError(async (req, res, next) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return next(new ErrorHandler("Email or Password are required", 400));
+  }
+  const user = await User.findOne({ email, accountVerified: true }).select("+password");
+
+  if(!user){
+    return next(new ErrorHandler("Invalid email or password", 400));
+  }
+  const isPasswordMatched = await user.comparePassword(password);
+
+  if(!isPasswordMatched){
+    return next(new ErrorHandler("Invalid email or password", 400));
+  }
+  sendToken(user , 200 , "User logged in successfully", res)
 });
 
 async function sendVerificationCode(

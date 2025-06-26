@@ -1,5 +1,6 @@
 import mongoose  from "mongoose";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken"
 
 const userSchema = new mongoose.Schema({
     name : String,
@@ -7,7 +8,8 @@ const userSchema = new mongoose.Schema({
     password : {
         type : String,
         minLength : [6, "password must have at least 6 charactrers "],
-        maxLength : [12, "password cannot have more than 12 charactrers "]
+        maxLength : [12, "password cannot have more than 12 charactrers "],
+        select : false
     },
     phone : String,
     accountVerified : {type : Boolean ,  default : false},
@@ -48,5 +50,12 @@ userSchema.methods.generateVerificationCode = function(){
 
     return verificationCode;
 }
+
+userSchema.methods.generateToken = async function(){
+    return jwt.sign({id: this._id}, process.env.JWT_SECRET_KEY,{
+        expiresIn : process.env.JWT_EXPIRE
+    })
+}
+
 
 export const User = mongoose.model("User" , userSchema);
