@@ -1,6 +1,7 @@
 import mongoose  from "mongoose";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
+import crytpo from "crypto";
 
 const userSchema = new mongoose.Schema({
     name : String,
@@ -55,6 +56,19 @@ userSchema.methods.generateToken = async function(){
     return await jwt.sign({id: this._id}, process.env.JWT_SECRET_KEY,{
         expiresIn : process.env.JWT_EXPIRE
     })
+}
+
+userSchema.methods.generateResetPasswordToken =  function (){
+    const resetToken = crytpo.randomBytes(20).toString("hex");
+
+    this.resetPasswordToken = crytpo
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+    this.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+    return resetToken;
 }
 
 

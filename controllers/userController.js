@@ -4,6 +4,7 @@ import { User } from "../models/userModel.js";
 import twilio from "twilio";
 import { sendEmail } from "../utils/sendEmail.js";
 import dotenv from "dotenv";
+import crypto from "crypto";
 import { sendToken } from "../utils/sendToken.js";
 dotenv.config({ path: "./.env" });
 
@@ -190,6 +191,75 @@ export const currentUser = catchAsyncError(async ( req ,res,next) =>{
     success : true,
     user
   })
+})
+
+export const forgotPassword = catchAsyncError(async (req ,res, next) =>{
+  const user = await User.findOne({
+    email : req.body.email,
+    accountVerified : true
+  });
+  if(!user){
+    return next(new ErrorHandler("User not found.", 404));
+  }
+  const resetToken = user.generateResetPasswordToken();
+  await user.save({validateBeforeSave : false});
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
+
+  const message = `Your Reset Password Token is :- \n\n ${resetPasswordUrl} \n\n If you have not requested this mail then please ignore it.`;
+
+  try{
+    sendEmail({
+      email : user.email,
+      subject : "Reset Password Mail",
+      message,
+    });
+    res.status(200).json({
+      success : true,
+      message : `Email send to ${user.email} successfully.`,
+    });
+
+  }catch(error){
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({validateBeforeSave : false});
+      return next(
+        new ErrorHandler(
+          error.message ? error.message : "cannot send reset password token",
+          500
+        ));
+  }
+})
+
+export const resetPassword = catchAsyncError(async (req ,res, next) =>{
+  const { token } = req.params;
+  const resetPasswordToken = crypto
+  .createHash("sha256")
+  .update(token)
+  .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire:{$gt : Date.now()},
+  })
+  if(!user){
+    return next(
+      new ErrorHandler(
+        "Reset password token is invalid or has been expired.",
+        400
+      )
+    )
+  }
+
+  if(req.body.password !== req.body.confirmPassword){
+    return next (new ErrorHandler("password and confirm password do not match." , 400 ))
+  }
+
+  user.password = req.body.password;
+  user.resetPasswordExpire = undefined;
+  user.resetPasswordToken = undefined;
+  await user.save();
+
+  sendToken(user , 200 , "Reset Password Successfully." , res);
 })
 
 async function sendVerificationCode(
